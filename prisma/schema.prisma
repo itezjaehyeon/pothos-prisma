@@ -1,0 +1,316 @@
+generator clinet {
+  provider = "prisma-client-js"
+}
+
+generator pothos {
+  provider     = "prisma-pothos-types"
+  clientOutput = "@prisma/client"
+  // output       = "../api/pothos-types.ts"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Admin {
+  id        Int        @id @default(autoincrement())
+  loginId   String     @unique(map: "UQ_admin_1") @map("login_id") @db.VarChar(50)
+  password  String     @db.VarChar(60)
+  state     AdminState
+  createdAt DateTime   @default(now()) @map("created_at") @db.DateTime(0)
+
+  @@map("admin")
+}
+
+model ContractLog {
+  id        Int      @id @default(autoincrement())
+  partnerId Int      @map("partner_id")
+  expiredAt DateTime @map("expired_at") @db.DateTime(0)
+  createdAt DateTime @default(now()) @map("created_at") @db.DateTime(0)
+  partner   Partner  @relation(fields: [partnerId], references: [id], onUpdate: Restrict, map: "FK_contract_log_partner_id_partner_id")
+
+  @@index([partnerId], map: "FK_contract_log_partner_id_partner_id")
+  @@map("contract_log")
+}
+
+model Event {
+  id                           String                @id @db.Char(32)
+  partnerId                    Int                   @map("partner_id")
+  posterImageInternal          String                @map("poster_image_internal") @db.Text
+  eventName                    String                @map("event_name") @db.VarChar(100)
+  hostInfo                     String                @map("host_info") @db.VarChar(50)
+  applyStartAt                 DateTime?             @map("apply_start_at") @db.DateTime(0)
+  applyEndAt                   DateTime?             @map("apply_end_at") @db.DateTime(0)
+  address                      String                @db.VarChar(200)
+  addressDetail                String                @map("address_detail") @db.VarChar(200)
+  contactTel                   String                @map("contact_tel") @db.VarChar(50)
+  maxApplyCount                Int?                  @map("max_apply_count")
+  canEnterBeforeMinute         Int                   @map("can_enter_before_minute")
+  isApproveNeeded              Boolean               @map("is_approve_needed")
+  isActive                     Boolean               @default(true) @map("is_active")
+  description                  String                @db.Text
+  createdAt                    DateTime              @default(now()) @map("created_at") @db.DateTime(0)
+  modifiedAt                   DateTime              @default(now()) @map("modified_at") @db.DateTime(0)
+  eventStartAt                 DateTime              @map("event_start_at") @db.DateTime(0)
+  eventEndAt                   DateTime              @map("event_end_at") @db.DateTime(0)
+  isReviewNoticeSent           Boolean               @default(false) @map("is_review_notice_sent")
+  termsOfUseHtmlInternal       String?               @map("terms_of_use_html_internal") @db.VarChar(50)
+  privacyHtmlInternal          String?               @map("privacy_html_internal") @db.VarChar(50)
+  termsOfMarketingHtmlInternal String?               @map("terms_of_marketing_html_internal") @db.VarChar(50)
+  bCode                        String                @map("b_code") @db.Char(10)
+  partner                      Partner               @relation(fields: [partnerId], references: [id], onUpdate: Restrict, map: "FK_event_partner_id_partner_id")
+  eventParticipant             EventParticipant[]
+  eventReviewQuestion          EventReviewQuestion[]
+  eventSchedule                EventSchedule[]
+  eventSurvey                  EventSurvey[]
+
+  @@index([partnerId], map: "FK_event_partner_id_partner_id")
+  @@map("event")
+}
+
+model EventParticipant {
+  id                     Int                         @id @default(autoincrement())
+  eventId                String                      @map("event_id") @db.Char(32)
+  userId                 String?                     @map("user_id") @db.Char(32)
+  name                   String                      @db.VarChar(20)
+  phone                  String                      @db.VarChar(11)
+  age                    Int?                        @db.TinyInt
+  gender                 EventParticipantGender
+  allowMarketing         Boolean                     @map("allow_marketing")
+  state                  EventParticipantState
+  createdAt              DateTime                    @default(now()) @map("created_at") @db.DateTime(0)
+  lastCheckedAt          DateTime?                   @map("last_checked_at") @db.DateTime(0)
+  reviewState            EventParticipantReviewState @default(NOT_FINISHED) @map("review_state")
+  canWriteReviewAt       DateTime?                   @map("can_write_review_at") @db.DateTime(0)
+  writeReviewAt          DateTime?                   @map("write_review_at") @db.DateTime(0)
+  event                  Event                       @relation(fields: [eventId], references: [id], onUpdate: Restrict, map: "FK_event_participant_event_id_event_id")
+  user                   User?                       @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "FK_event_participant_user_id_user_id")
+  eventParticipantSurvey EventParticipantSurvey[]
+  eventReviewAnswer      EventReviewAnswer[]
+
+  @@unique([eventId, phone], map: "UQ_event_participant_1")
+  @@index([userId], map: "FK_event_participant_user_id_user_id")
+  @@index([eventId, userId], map: "event_participant_event_id_user_id_index")
+  @@map("event_participant")
+}
+
+model EventParticipantSurvey {
+  id                 Int                             @id @default(autoincrement())
+  eventParticipantId Int                             @map("event_participant_id")
+  eventSurveyId      Int?                            @map("event_survey_id")
+  inputType          EventParticipantSurveyInputType @map("input_type")
+  question           String                          @db.VarChar(100)
+  answerInternal     String                          @map("answer_internal") @db.VarChar(1000)
+  eventParticipant   EventParticipant                @relation(fields: [eventParticipantId], references: [id], onUpdate: Restrict, map: "FK_event_participant_survey_event_participant_id_event_participa")
+
+  @@index([eventSurveyId], map: "IX_event_participant_survey_1")
+  @@index([eventParticipantId], map: "FK_event_participant_survey_event_participant_id_event_participa")
+  @@map("event_participant_survey")
+}
+
+model EventReviewAnswer {
+  id                    Int                        @id @default(autoincrement())
+  eventParticipantId    Int                        @map("event_participant_id")
+  eventReviewQuestionId Int?                       @map("event_review_question_id")
+  inputType             EventReviewAnswerInputType @map("input_type")
+  question              String                     @db.VarChar(100)
+  score                 Int?                       @db.TinyInt
+  answer                String?                    @db.VarChar(1000)
+  EventParticipant      EventParticipant           @relation(fields: [eventParticipantId], references: [id], onUpdate: Restrict, map: "FK_event_review_answer_event_participant_id_event_participant_id")
+
+  @@index([eventReviewQuestionId], map: "IX_event_review_answer_1")
+  @@index([eventParticipantId], map: "FK_event_review_answer_event_participant_id_event_participant_id")
+  @@map("event_review_answer")
+}
+
+model EventReviewQuestion {
+  id          Int                          @id @default(autoincrement())
+  eventId     String                       @map("event_id") @db.Char(32)
+  inputType   EventReviewQuestionInputType @map("input_type")
+  title       String                       @db.VarChar(100)
+  description String                       @db.VarChar(200)
+  sortOrder   Int                          @map("sort_order") @db.SmallInt
+  event       Event                        @relation(fields: [eventId], references: [id], onUpdate: Restrict, map: "FK_event_review_question_event_id_event_id")
+
+  @@index([eventId], map: "FK_event_review_question_event_id_event_id")
+  @@map("event_review_question")
+}
+
+model EventSchedule {
+  id      Int       @id @default(autoincrement())
+  eventId String    @map("event_id") @db.Char(32)
+  startAt DateTime  @map("start_at") @db.DateTime(0)
+  endAt   DateTime? @map("end_at") @db.DateTime(0)
+  event   Event     @relation(fields: [eventId], references: [id], onUpdate: Restrict, map: "FK_event_schedule_event_id_event_id")
+
+  @@index([eventId], map: "FK_event_schedule_event_id_event_id")
+  @@map("event_schedule")
+}
+
+model EventSurvey {
+  id                 Int                  @id @default(autoincrement())
+  eventId            String               @map("event_id") @db.Char(32)
+  title              String               @db.VarChar(100)
+  description        String               @db.VarChar(200)
+  inputType          EventSurveyInputType @map("input_type")
+  selectDataInternal String?              @map("select_data_internal") @db.Text
+  sortOrder          Int                  @map("sort_order") @db.SmallInt
+  isRequired         Boolean              @map("is_required")
+  event              Event                @relation(fields: [eventId], references: [id], onUpdate: Restrict, map: "FK_event_survey_event_id_event_id")
+
+  @@index([eventId], map: "FK_event_survey_event_id_event_id")
+  @@map("event_survey")
+}
+
+model Partner {
+  id          Int           @id @default(autoincrement())
+  loginId     String        @unique(map: "UQ_partner_1") @map("login_id") @db.VarChar(50)
+  password    String        @db.VarChar(60)
+  state       PartnerState
+  createdAt   DateTime      @default(now()) @map("created_at") @db.DateTime(0)
+  expiredAt   DateTime      @default(now()) @map("expired_at") @db.DateTime(0)
+  contractLog ContractLog[]
+  event       Event[]
+  partnerInfo PartnerInfo?
+
+  @@map("partner")
+}
+
+model PartnerInfo {
+  partnerId     Int     @id @map("partner_id")
+  companyName   String  @map("company_name") @db.VarChar(50)
+  companyNumber String  @map("company_number") @db.VarChar(12)
+  contactTel    String  @map("contact_tel") @db.VarChar(30)
+  partner       Partner @relation(fields: [partnerId], references: [id], onUpdate: Restrict, map: "FK_partner_info_partner_id_partner_id")
+
+  @@map("partner_info")
+}
+
+model PhoneVerification {
+  id                 Int       @id @default(autoincrement())
+  phone              String    @db.VarChar(11)
+  verificationNumber String    @map("verification_number") @db.Char(6)
+  expiredAt          DateTime? @map("expired_at") @db.DateTime(0)
+  createdAt          DateTime  @default(now()) @map("created_at") @db.DateTime(0)
+
+  @@map("phone_verification")
+}
+
+model SiteInformation {
+  id          String              @id @db.VarChar(30)
+  type        SiteInformationType
+  description String              @db.VarChar(100)
+  content     String              @db.LongText
+
+  @@map("site_information")
+}
+
+model SurveyBanner {
+  id            Int      @id @default(autoincrement())
+  imageInternal String   @map("image_internal") @db.VarChar(200)
+  isActive      Boolean  @default(true) @map("is_active")
+  createdAt     DateTime @default(now()) @map("created_at") @db.DateTime(0)
+
+  @@map("survey_banner")
+}
+
+model User {
+  id               String             @id @db.Char(32)
+  phone            String             @unique(map: "user_phone_uindex") @db.VarChar(11)
+  joinedAt         DateTime           @default(now()) @map("joined_at") @db.DateTime(0)
+  agreeMarketing   Boolean            @map("agree_marketing")
+  state            UserState          @default(ACTIVE)
+  eventParticipant EventParticipant[]
+
+  @@map("user")
+}
+
+enum SiteInformationType {
+  ALL
+
+  @@map("site_information_type")
+}
+
+enum EventReviewQuestionInputType {
+  SCORE
+  TEXT
+
+  @@map("event_review_question_input_type")
+}
+
+enum PartnerState {
+  ACTIVE
+  BANNED
+  DELETED
+
+  @@map("partner_state")
+}
+
+enum EventParticipantSurveyInputType {
+  SELECT
+  SELECT_MULTI
+  INPUT_TEXT
+  SMALL_TEXT
+  LONG_TEXT
+
+  @@map("event_participant_survey_input_type")
+}
+
+enum AdminState {
+  ACTIVE
+  DELETED
+
+  @@map("admin_state")
+}
+
+enum EventReviewAnswerInputType {
+  SCORE
+  TEXT
+
+  @@map("event_review_answer_input_type")
+}
+
+enum UserState {
+  ACTIVE
+  BANNED
+  DELETED
+
+  @@map("user_state")
+}
+
+enum EventSurveyInputType {
+  SELECT
+  SELECT_MULTI
+  INPUT_TEXT
+  SMALL_TEXT
+  LONG_TEXT
+
+  @@map("event_survey_input_type")
+}
+
+enum EventParticipantGender {
+  MALE
+  FEMALE
+  ETC
+
+  @@map("event_participant_gender")
+}
+
+enum EventParticipantState {
+  WAIT_APPROVE
+  REJECTED
+  APPROVED
+  CHECK_DONE
+
+  @@map("event_participant_state")
+}
+
+enum EventParticipantReviewState {
+  NOT_FINISHED
+  CAN_WRITE
+  WRITTEN
+  EXPIRED
+
+  @@map("event_participant_review_state")
+}
