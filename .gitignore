@@ -1,5 +1,4 @@
 prisma/schema.dbml
-prisma/test.ts
 *firebase*.json
 update.sh
 
@@ -7,8 +6,6 @@ log/*
 api/graphql/_template/*
 api/rule-info.json
 
-spheric-radio-350804-555d9501a430.json
-palmpharm-d8626-76a27b889b6b.json
 
 .vsls.json
 hook_github.sh
